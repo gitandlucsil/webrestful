@@ -20,6 +20,7 @@ import com.google.api.client.googleapis.extensions.java6.auth.oauth2.GooglePromp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -31,6 +32,7 @@ import com.google.api.services.storage.StorageScopes;
 import com.google.api.services.storage.model.Bucket;
 import com.google.api.services.storage.model.StorageObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashSet;
@@ -74,42 +76,27 @@ public class StorageSample {
 
   /** Authorizes the installed application to access user's protected data. */
   private static Credential authorize() throws Exception {
-    // Load client secrets.
-    GoogleClientSecrets clientSecrets = null;
-    try {
-      clientSecrets = GoogleClientSecrets.load(JSON_FACTORY,
-          new InputStreamReader(StorageSample.class.getResourceAsStream(String.format("/%s",CLIENT_SECRET_FILENAME))));
-      if (clientSecrets.getDetails().getClientId() == null ||
-          clientSecrets.getDetails().getClientSecret() == null) {
-          throw new Exception("client_secrets not well formed.");
-      }
-    } catch (Exception e) {
-      System.out.println("Problem loading client_secrets.json file. Make sure it exists, you are " + 
-                        "loading it with the right path, and a client ID and client secret are " +
-                        "defined in it.\n" + e.getMessage());
-      System.exit(1);
-    }
-
-    // Set up authorization code flow.
-    // Ask for only the permissions you need. Asking for more permissions will
-    // reduce the number of users who finish the process for giving you access
-    // to their accounts. It will also increase the amount of effort you will
-    // have to spend explaining to users what you are doing with their data.
-    // Here we are listing all of the available scopes. You should remove scopes
-    // that you are not actually using.
     Set<String> scopes = new HashSet<String>();
     scopes.add(StorageScopes.DEVSTORAGE_FULL_CONTROL);
     scopes.add(StorageScopes.DEVSTORAGE_READ_ONLY);
     scopes.add(StorageScopes.DEVSTORAGE_READ_WRITE);
-
-    GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-        httpTransport, JSON_FACTORY, clientSecrets, scopes)
-        .setDataStoreFactory(dataStoreFactory)
-        .build();
-    // Authorize.
-    VerificationCodeReceiver receiver = 
-        AUTH_LOCAL_WEBSERVER ? new LocalServerReceiver() : new GooglePromptReceiver();
-    return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");    
+    //Campo Service account ID criado no console
+    String accountId = "compute-engine@tranquil-lotus-221723.iam.gserviceaccount.com";
+    //Arquivo .p12 baixado no console no momento de criar a chave
+    File p12File = new File("My First Project-5b856fecf571.p12");
+    //Autoriza a aplicação
+    JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
+    HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+    GoogleCredential credential = new GoogleCredential
+    		.Builder()
+    		.setTransport(httpTransport)
+    		.setJsonFactory(JSON_FACTORY)
+    		.setServiceAccountId(accountId)
+    		.setServiceAccountPrivateKeyFromP12File(p12File)
+    		.setServiceAccountScopes(scopes)
+    		.build();
+    return credential;
+    
   }
 
   public static void main(String[] args) {
